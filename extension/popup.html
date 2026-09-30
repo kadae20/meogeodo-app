@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        width: 280px;
+        margin: 0;
+        padding: 14px;
+        color: #0f172a;
+      }
+      h1 { font-size: 14px; margin: 0 0 8px; color: #047857; }
+      p { font-size: 12px; color: #64748b; margin: 0 0 10px; }
+      label { font-size: 11px; color: #475569; display: block; margin-bottom: 4px; }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 6px 8px;
+        margin-bottom: 8px;
+      }
+      button {
+        width: 100%;
+        border: 0;
+        background: #047857;
+        color: #fff;
+        border-radius: 8px;
+        padding: 8px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .ghost { background: #f1f5f9; color: #0f172a; margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>먹어도될까</h1>
+    <p id="status">연결 확인 중…</p>
+    <label>앱 주소</label>
+    <input id="origin" placeholder="http://localhost:3000" />
+    <button id="save">주소 저장</button>
+    <button class="ghost" id="open">설치·온보딩 페이지</button>
+    <script src="popup.js"></script>
+  </body>
+</html>
