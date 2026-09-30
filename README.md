@@ -75,10 +75,11 @@ supabase/migrations/001_init.sql
 
 ## 제출 (미션 5)
 
-- GitHub: (푸시 후 이 칸을 채움)
-- Vercel: (배포 후 이 칸을 채움)
+- GitHub: https://github.com/kadae20/meogeodo-app
+- Pull Request: https://github.com/kadae20/meogeodo-app/pull/1
+- Vercel: https://meogeodo-app.vercel.app
 
-평가용 랜딩은 배포 URL의 `/` 입니다. 로그인·검수는 Supabase 환경 변수가 있는 경우에만 동작합니다.
+평가용 랜딩은 배포 URL의 `/` 입니다. 로그인·검수는 Supabase 환경 변수가 Vercel에 있을 때만 동작합니다.
 
 검수 결과는 사용자가 저장한 기준과 상품 표시 정보의 비교 결과이며, 의학적·수의학적 판단이 아닙니다. UI/설명 문구에서 "안전함/위험함/추천" 등의 표현은 사용하지 않습니다.
 
