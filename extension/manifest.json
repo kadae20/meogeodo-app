@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "먹어도될까",
+  "version": "0.1.14",
+  "description": "쿠팡 상품 페이지에서 가족 프로필 기준으로 바로 검수합니다.",
+  "icons": {
+    "128": "icon.png"
+  },
+  "action": {
+    "default_title": "먹어도될까",
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["cookies", "storage"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*",
+    "https://www.coupang.com/*",
+    "https://m.coupang.com/*",
+    "https://*.coupangcdn.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.coupang.com/*",
+        "https://m.coupang.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}
