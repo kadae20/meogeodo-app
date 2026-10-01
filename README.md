@@ -76,7 +76,7 @@ supabase/migrations/001_init.sql
 ## 제출 (미션 5)
 
 - GitHub: https://github.com/kadae20/meogeodo-app
-- Pull Request: https://github.com/kadae20/meogeodo-app/pull/1
+- Pull Request: https://github.com/kadae20/meogeodo-app/pull/1 ([박건호]-미션5)
 - Vercel: https://meogeodo-app.vercel.app
 
 평가용 랜딩은 배포 URL의 `/` 입니다. 로그인·검수는 Supabase 환경 변수가 Vercel에 있을 때만 동작합니다.
@@ -85,8 +85,27 @@ supabase/migrations/001_init.sql
 
 ## 랜딩 인터랙션
 
-- 문제 / 해결 / 기대효과 / 시작 메뉴로 섹션 스크롤
-- 모바일 햄버거 메뉴
-- 스크롤에 맞춰 섹션·카드가 올라오며 나타남 (`prefers-reduced-motion`이면 끔)
-- 상품 페이지 미리보기 카드가 살짝 떠 있음
+- 문제 / 해결 / 기대효과 / 시작 메뉴로 섹션 스크롤 이동
+- 모바일 햄버거 메뉴 토글 (lg 이하에서 햄버거 → 메뉴 전환)
+- 스크롤에 맞춰 섹션·카드가 올라오며 나타남 (IntersectionObserver, `prefers-reduced-motion`이면 즉시 표시)
+- 상품 페이지 미리보기 카드가 살짝 떠 있음 (hover 효과)
 - 비로그인 이메일 제출 시 `/login?email=&next=/app`
+
+## 미션 5 요구사항 대응
+
+| 요구사항 | 구현 내용 |
+|---|---|
+| 랜딩 페이지 기획 | 문제→해결→기대효과→CTA 흐름, 타깃: 장보는 가족(아이·성인·반려동물), CTA: 이메일 제출→로그인→앱 |
+| 프로젝트 컨텍스트 | `CLAUDE.md`에 서비스 목적·스택·디자인·작업규칙 정리 |
+| Figma 시안 기반 구현 | 히어로·기능소개·기대효과·CTA 섹션을 `components/landing/*` 컴포넌트로 분리 |
+| 반응형 레이아웃 | Tailwind 반응형 유틸리티 (`lg:`)로 모바일/데스크톱 대응 |
+| JS 인터랙션 | 1) 모바일 메뉴 토글 2) 섹션 스크롤 이동 3) Reveal 스크롤 애니메이션 4) CTA 이메일 폼 처리 |
+| 기본 품질 | 이미지 alt·버튼/링크 구분·메타데이터·OG 이미지·lang=ko 설정 완료 |
+| GitHub + Vercel | `basic-박건호` 브랜치 → PR `[박건호]-미션5` → Vercel 프로덕션 배포 |
+
+### 심화 요구사항
+
+| 요구사항 | 상태 |
+|---|---|
+| 오픈그래프 이미지·메타데이터 | `app/opengraph-image.tsx` + `metadataBase` (VERCEL_URL 자동 감지) |
+| 스크롤 애니메이션 | `Reveal` 컴포넌트 (IntersectionObserver + prefers-reduced-motion 대응) |
