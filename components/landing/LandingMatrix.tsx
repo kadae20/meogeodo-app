@@ -67,7 +67,7 @@ export function LandingMatrix() {
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                      <Image src={row.src} alt="" fill className="object-cover" sizes="48px" />
+                      <Image src={row.src} alt={row.name} fill className="object-cover" sizes="48px" />
                     </span>
                     <span>
                       <span className="block text-sm font-medium">{row.name}</span>
