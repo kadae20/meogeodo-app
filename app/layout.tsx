@@ -10,7 +10,10 @@ export const metadata: Metadata = {
   description:
     "장볼 때마다 원재료를 다시 읽지 않게. 가족 기준을 저장하고 쿠팡에서 비교합니다.",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+    process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000")
   ),
   openGraph: {
     title: "먹어도될까",
