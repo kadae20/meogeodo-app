@@ -17,3 +17,12 @@ export function getSupabaseEnv() {
   return env;
 }
 
+/** 지금 열린 앱 origin. 로컬은 localhost, 배포는 Vercel. */
+export function getAppUrl() {
+  if (typeof window !== "undefined") return window.location.origin;
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}
+
