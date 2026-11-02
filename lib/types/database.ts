@@ -77,7 +77,9 @@ export interface NormalizedLabelRow {
   origins_json: string[];
   label_quality_json: LabelQuality | Record<string, never>;
   confidence_score: number;
+  /** @deprecated 단일 사진 URL. 006 마이그레이션 이후 label_image_urls 배열을 사용한다. */
   label_image_url: string | null;
+  label_image_urls: string[] | null;
   created_at: string;
 }
 

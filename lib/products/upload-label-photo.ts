@@ -40,3 +40,33 @@ export async function uploadLabelPhoto(
     return null;
   }
 }
+
+/** 여러 장을 순차적으로 업로드하고 성공한 URL만 담아 반환한다. */
+export async function uploadLabelPhotos(
+  supabase: SupabaseClient,
+  files: File[]
+): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const url = await uploadLabelPhoto(supabase, file);
+    if (url) urls.push(url);
+  }
+  return urls;
+}
+
+/** label-photos 버켓에서 공개 URL에 해당하는 파일을 삭제한다. 실패해도 조용히 무시한다 (고아 파일 방지용 best-effort). */
+export async function deleteLabelPhoto(
+  supabase: SupabaseClient,
+  publicUrl: string
+): Promise<void> {
+  try {
+    const marker = "/object/public/label-photos/";
+    const idx = publicUrl.indexOf(marker);
+    if (idx < 0) return;
+    const path = decodeURIComponent(publicUrl.slice(idx + marker.length));
+    if (!path) return;
+    await supabase.storage.from("label-photos").remove([path]);
+  } catch (err) {
+    console.warn("[deleteLabelPhoto] 삭제 중 오류:", err);
+  }
+}

@@ -1,3 +1,5 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ResultBadge } from "@/components/inspections/ResultBadge";
@@ -18,19 +20,55 @@ type SharedPayload = {
   items: SharedItem[];
 };
 
+const getSharedInspection = cache(async (token: string) => {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("get_shared_inspection", { token });
+  if (error || !data) return null;
+  const payload = data as SharedPayload;
+  if (!payload.created_at) return null;
+  return payload;
+});
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { token: string };
+}): Promise<Metadata> {
+  const payload = await getSharedInspection(params.token);
+  if (!payload) {
+    return { title: "검수 결과를 찾을 수 없습니다 · 먹어도될까" };
+  }
+
+  const s = payload.summary ?? {};
+  const title = `${payload.title || "먹어도될까 검수 결과"} · 먹어도될까`;
+  const description = `통과 ${s.pass ?? 0} · 확인 필요 ${s.check_needed ?? 0} · 충돌 ${
+    s.conflict ?? 0
+  } · 정보 부족 ${s.insufficient ?? 0} — 가족 기준으로 비교한 식품 검수 결과입니다.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      locale: "ko_KR",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
+
 export default async function SharePage({
   params,
 }: {
   params: { token: string };
 }) {
-  const supabase = createClient();
-  const { data, error } = await supabase.rpc("get_shared_inspection", {
-    token: params.token,
-  });
-
-  if (error || !data) notFound();
-  const payload = data as SharedPayload;
-  if (!payload.created_at) notFound();
+  const payload = await getSharedInspection(params.token);
+  if (!payload) notFound();
 
   return (
     <div className="mx-auto min-h-screen max-w-2xl bg-white px-4 py-10 print:px-0">

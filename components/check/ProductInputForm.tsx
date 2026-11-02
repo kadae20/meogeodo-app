@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, Link2, Bookmark } from "lucide-react";
+import { Camera, Link2, Bookmark, X } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { mergeProductFields } from "@/lib/products/fill-from-source";
 import { meogeodoListingBookmarklet } from "@/lib/products/bookmarklet";
 import { createClient } from "@/lib/supabase/client";
-import { uploadLabelPhoto } from "@/lib/products/upload-label-photo";
+import { uploadLabelPhoto, deleteLabelPhoto } from "@/lib/products/upload-label-photo";
 import type { ProductInput } from "@/lib/types/food";
 
 const ALLOWED_TYPES = new Set([
@@ -20,6 +20,8 @@ const ALLOWED_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
+
+const MAX_PHOTOS = 4;
 
 export function ProductInputForm({
   value,
@@ -34,22 +36,34 @@ export function ProductInputForm({
   const [ocrLoading, setOcrLoading] = useState(false);
   const [urlLoading, setUrlLoading] = useState(false);
   const [barcodeLoading, setBarcodeLoading] = useState(false);
+  const [removingUrl, setRemovingUrl] = useState<string | null>(null);
 
   function set<K extends keyof ProductInput>(key: K, v: ProductInput[K]) {
     onChange({ ...value, [key]: v });
   }
 
-  async function onPickImage(file: File | undefined) {
-    if (!file) return;
-    if (!ALLOWED_TYPES.has(file.type)) {
-      toast.error("jpg, png, webp, gif 이미지만 올릴 수 있습니다.");
-      return;
+  async function onPickImages(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return;
+    const existing = value.label_image_urls?.length ?? 0;
+    const files = Array.from(fileList).slice(0, Math.max(0, MAX_PHOTOS - existing));
+    if (files.length < fileList.length) {
+      toast.info(`사진은 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요.`);
     }
-    if (file.size > 4 * 1024 * 1024) {
-      toast.error("이미지는 4MB 이하로 올려주세요.");
-      return;
+    for (const file of files) {
+      if (!ALLOWED_TYPES.has(file.type)) {
+        toast.error(`${file.name}: jpg, png, webp, gif 이미지만 올릴 수 있습니다.`);
+        continue;
+      }
+      if (file.size > 4 * 1024 * 1024) {
+        toast.error(`${file.name}: 이미지는 4MB 이하로 올려주세요.`);
+        continue;
+      }
+      await processOneImage(file);
     }
+    if (fileRef.current) fileRef.current.value = "";
+  }
 
+  async function processOneImage(file: File) {
     setOcrLoading(true);
     try {
       const dataUrl = await readAsDataUrl(file);
@@ -77,7 +91,12 @@ export function ProductInputForm({
       if (!res.ok) throw new Error(data.error ?? "사진 읽기에 실패했습니다.");
 
       const f = data.fields as Partial<ProductInput>;
-      onChange(mergeProductFields(value, { ...f, label_image_url: labelImageUrl }));
+      onChange(
+        mergeProductFields(value, {
+          ...f,
+          label_image_urls: labelImageUrl ? [labelImageUrl] : [],
+        })
+      );
       toast.success(
         labelImageUrl
           ? "사진에서 표시 정보를 채웠습니다. 올린 사진은 검수 결과에서 다시 볼 수 있어요."
@@ -87,7 +106,19 @@ export function ProductInputForm({
       toast.error(err instanceof Error ? err.message : "사진 읽기에 실패했습니다.");
     } finally {
       setOcrLoading(false);
-      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function removePhoto(url: string) {
+    setRemovingUrl(url);
+    try {
+      await deleteLabelPhoto(createClient(), url);
+    } finally {
+      onChange({
+        ...value,
+        label_image_urls: (value.label_image_urls ?? []).filter((u) => u !== url),
+      });
+      setRemovingUrl(null);
     }
   }
 
@@ -159,6 +190,7 @@ export function ProductInputForm({
     value.raw_ingredients_text?.trim() ||
     value.raw_nutrition_text?.trim()
   );
+  const photos = value.label_image_urls ?? [];
 
   return (
     <div className="space-y-4">
@@ -227,20 +259,52 @@ export function ProductInputForm({
         <input
           ref={fileRef}
           type="file"
+          multiple
           accept="image/jpeg,image/png,image/webp,image/gif"
           className="hidden"
-          onChange={(e) => onPickImage(e.target.files?.[0])}
+          onChange={(e) => onPickImages(e.target.files)}
         />
         <Button
           type="button"
           variant="outline"
           className="w-full"
-          disabled={ocrLoading}
+          disabled={ocrLoading || photos.length >= MAX_PHOTOS}
           onClick={() => fileRef.current?.click()}
         >
           {ocrLoading ? <Spinner /> : <Camera className="h-4 w-4" />}
-          {ocrLoading ? "라벨 읽는 중…" : "라벨 사진으로 채우기"}
+          {ocrLoading
+            ? "라벨 읽는 중…"
+            : photos.length >= MAX_PHOTOS
+              ? `사진 ${MAX_PHOTOS}장 모두 올렸어요`
+              : "라벨 사진으로 채우기 (원재료·영양정보 면 여러 장 가능)"}
         </Button>
+        {photos.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {photos.map((url) => (
+              <div key={url} className="group relative h-16 w-16">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt="올린 라벨 사진"
+                  className="h-16 w-16 rounded-lg border border-slate-200 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(url)}
+                  disabled={removingUrl === url}
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900/80 text-white hover:bg-red-600 disabled:opacity-50"
+                  aria-label="사진 삭제"
+                >
+                  {removingUrl === url ? (
+                    <Spinner className="h-3 w-3" />
+                  ) : (
+                    <X className="h-3 w-3" />
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {extrasFilled && (

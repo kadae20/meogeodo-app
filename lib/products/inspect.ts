@@ -29,7 +29,7 @@ export const productSchema = z.object({
   raw_nutrition_text: z.string().optional(),
   raw_allergen_text: z.string().optional(),
   raw_origin_text: z.string().optional(),
-  label_image_url: z.string().url().optional().nullable(),
+  label_image_urls: z.array(z.string().url()).optional(),
 });
 
 export const inspectBodySchema = z.object({

@@ -130,8 +130,8 @@ export interface ProductInput {
   barcode?: string;
   /** 북마크릿이 상품 페이지에서 가져온 본문. 저장하지 않음 */
   page_text?: string;
-  /** 업로드한 라벨 사진의 Supabase Storage 공개 URL (검수 상세에서 다시 확인용) */
-  label_image_url?: string | null;
+  /** 업로드한 라벨 사진들의 Supabase Storage 공개 URL 목록 (검수 상세에서 다시 확인용) */
+  label_image_urls?: string[];
 }
 
 export interface InspectionSummary {

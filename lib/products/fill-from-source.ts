@@ -40,7 +40,9 @@ export function mergeProductFields(
         ? value.raw_origin_text
         : "",
     page_text: f.page_text || value.page_text,
-    label_image_url: f.label_image_url || value.label_image_url || null,
+    label_image_urls: Array.from(
+      new Set([...(value.label_image_urls ?? []), ...(f.label_image_urls ?? [])])
+    ),
   };
 }
 

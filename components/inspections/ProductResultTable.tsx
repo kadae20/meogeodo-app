@@ -14,7 +14,7 @@ export interface ProductResultView {
   brandName: string | null;
   category: string | null;
   ingredientsSummary: string;
-  labelImageUrl?: string | null;
+  labelImageUrls?: string[];
   results: {
     id: string;
     profileId: string | null;
@@ -62,24 +62,28 @@ export function ProductResultTable({
             원재료 요약: {product.ingredientsSummary}
           </p>
         )}
-        {product.labelImageUrl && (
-          <a
-            href={product.labelImageUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 inline-flex items-center gap-2"
-            title="새 탭에서 라벨 사진 크게 보기"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={product.labelImageUrl}
-              alt={`${product.productName} 라벨 사진`}
-              className="h-16 w-16 rounded-lg border border-slate-200 object-cover"
-            />
-            <span className="text-xs text-emerald-700 hover:underline">
-              올린 성분표 사진 크게 보기
+        {!!product.labelImageUrls?.length && (
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {product.labelImageUrls.map((url, i) => (
+              <a
+                key={url}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`새 탭에서 ${i + 1}번째 라벨 사진 크게 보기`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`${product.productName} 라벨 사진 ${i + 1}`}
+                  className="h-16 w-16 rounded-lg border border-slate-200 object-cover"
+                />
+              </a>
+            ))}
+            <span className="text-xs text-emerald-700">
+              올린 성분표 사진 {product.labelImageUrls.length}장 · 클릭하면 크게 보기
             </span>
-          </a>
+          </div>
         )}
       </CardHeader>
       <CardContent>
