@@ -1,0 +1,8 @@
+#meogeodo-host {
+  all: initial;
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483646;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
