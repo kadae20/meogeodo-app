@@ -49,6 +49,9 @@ export function ProductInputForm({
     if (files.length < fileList.length) {
       toast.info(`사진은 최대 ${MAX_PHOTOS}장까지 올릴 수 있어요.`);
     }
+    // 여러 장을 연속 처리할 때 React의 value prop은 루프 사이에 갱신되지 않으므로,
+    // 지역 누적기(current)를 따로 두고 순차적으로 병합해야 앞서 올린 사진 결과가 유실되지 않는다.
+    let current = value;
     for (const file of files) {
       if (!ALLOWED_TYPES.has(file.type)) {
         toast.error(`${file.name}: jpg, png, webp, gif 이미지만 올릴 수 있습니다.`);
@@ -58,12 +61,12 @@ export function ProductInputForm({
         toast.error(`${file.name}: 이미지는 4MB 이하로 올려주세요.`);
         continue;
       }
-      await processOneImage(file);
+      current = await processOneImage(file, current);
     }
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  async function processOneImage(file: File) {
+  async function processOneImage(file: File, base: ProductInput): Promise<ProductInput> {
     setOcrLoading(true);
     try {
       const dataUrl = await readAsDataUrl(file);
@@ -91,19 +94,20 @@ export function ProductInputForm({
       if (!res.ok) throw new Error(data.error ?? "사진 읽기에 실패했습니다.");
 
       const f = data.fields as Partial<ProductInput>;
-      onChange(
-        mergeProductFields(value, {
-          ...f,
-          label_image_urls: labelImageUrl ? [labelImageUrl] : [],
-        })
-      );
+      const merged = mergeProductFields(base, {
+        ...f,
+        label_image_urls: labelImageUrl ? [labelImageUrl] : [],
+      });
+      onChange(merged);
       toast.success(
         labelImageUrl
           ? "사진에서 표시 정보를 채웠습니다. 올린 사진은 검수 결과에서 다시 볼 수 있어요."
           : "사진에서 표시 정보를 채웠습니다. 내용을 확인한 뒤 검수하세요."
       );
+      return merged;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "사진 읽기에 실패했습니다.");
+      return base;
     } finally {
       setOcrLoading(false);
     }
