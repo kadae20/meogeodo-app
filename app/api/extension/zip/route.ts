@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 import { EXTENSION_VERSION } from "@/lib/extension/version";
 
 export const maxDuration = 30;
+// 이 라우트는 cookies()/headers() 등 동적 API를 써지 않아 Next.js가 빌드 시점에 정적으로 굴려버릴 수 있다.
+// 그러면 extension/ 폴더를 고쳐도 다운로드 ZIP은 듰 온 버전으로 고정된다 — 강제로 매 요청 실행되게 한다.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   const dir = path.join(process.cwd(), "extension");
@@ -36,6 +40,7 @@ export async function GET() {
     headers: {
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="meogeodo-extension-v${EXTENSION_VERSION}.zip"`,
+      "Cache-Control": "no-store, max-age=0",
     },
   });
 }
