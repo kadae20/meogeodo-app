@@ -76,14 +76,16 @@ function LoginForm() {
 
   async function oauth(provider: OAuthProvider) {
     setLoading(true);
-    const supabase = createClient();
     const dest = next.startsWith("/") ? next : "/app";
+    if (provider === "google") {
+      window.location.href = `/auth/google/start?next=${encodeURIComponent(dest)}`;
+      return;
+    }
+    const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: (provider === "naver" ? "custom:naver" : provider) as Provider,
       options: {
         redirectTo: `${getAppUrl()}/auth/callback?next=${encodeURIComponent(dest)}`,
-        queryParams:
-          provider === "google" ? { prompt: "select_account" } : undefined,
       },
     });
     if (error) {
