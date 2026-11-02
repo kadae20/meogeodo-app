@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+// 상품 검수 핵심 로직 — 프로필·기준 로드, 라벨 정규화, Rule Engine 실행,
+// Claude 설명 생성, 결과 저장까지 전부 여기서 처리한다.
+// app/api/products/inspect-product/route.ts는 이 함수를 호출하는 얇은 핸들러만 남긴다.
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { normalizeLabel } from "@/lib/products/normalize";
 import { saveProductWithLabel } from "@/lib/products/save-product";
 import { fallbackProductName } from "@/lib/products/identity";
@@ -17,9 +19,7 @@ import {
 } from "@/lib/types/food";
 import type { FamilyProfileRow, ProfileRuleRow } from "@/lib/types/database";
 
-export const maxDuration = 60;
-
-const productSchema = z.object({
+export const productSchema = z.object({
   product_url: z.string().optional(),
   product_name: z.string().optional(),
   brand_name: z.string().optional(),
@@ -32,13 +32,24 @@ const productSchema = z.object({
   label_image_url: z.string().url().optional().nullable(),
 });
 
-const bodySchema = z.object({
+export const inspectBodySchema = z.object({
   inspection_type: z.enum(["single_product", "cart_manual"]),
   title: z.string().optional(),
   profile_ids: z.array(z.string().uuid()).min(1, "검수할 프로필을 선택해주세요."),
   include_mismatched: z.boolean().optional(),
   products: z.array(productSchema).min(1).max(20),
 });
+
+export type InspectBody = z.infer<typeof inspectBodySchema>;
+
+/** 검수 처리 중 사용자에게 보여줄 메시지 + HTTP 상태코드를 함께 담는 에러. */
+export class InspectError extends Error {
+  status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function defaultExplanation(
   profileName: string,
@@ -58,30 +69,14 @@ function defaultExplanation(
   }
 }
 
-export async function POST(request: Request) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
-  }
-
-  const parsed = bodySchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "잘못된 요청입니다." },
-      { status: 400 }
-    );
-  }
-  const body = parsed.data;
-
+export async function runInspection(
+  supabase: SupabaseClient,
+  user: User,
+  body: InspectBody
+): Promise<{ inspectionId: string; summary: InspectionSummary }> {
   // 1. 선택된 프로필 + 기준 로드 (RLS로 본인 것만)
   const [profilesRes, rulesRes] = await Promise.all([
-    supabase
-      .from("family_profiles")
-      .select("*")
-      .in("id", body.profile_ids),
+    supabase.from("family_profiles").select("*").in("id", body.profile_ids),
     supabase
       .from("profile_rules")
       .select("*")
@@ -91,10 +86,7 @@ export async function POST(request: Request) {
 
   const profiles = (profilesRes.data ?? []) as FamilyProfileRow[];
   if (profiles.length === 0) {
-    return NextResponse.json(
-      { error: "선택한 가족 프로필을 찾을 수 없습니다." },
-      { status: 400 }
-    );
+    throw new InspectError("선택한 가족 프로필을 찾을 수 없습니다.");
   }
 
   const audience = inferProductAudience({
@@ -110,12 +102,8 @@ export async function POST(request: Request) {
     ? profiles
     : profiles.filter((p) => profileFitsAudience(p.profile_type, audience));
   if (scoped.length === 0) {
-    return NextResponse.json(
-      {
-        error:
-          "이 상품은 지금 선택된 가족과 대상이 다릅니다. 사람 식품이면 사람 프로필을, 사료면 반려동물 프로필을 선택해 주세요.",
-      },
-      { status: 400 }
+    throw new InspectError(
+      "이 상품은 지금 선택된 가족과 대상이 다릅니다. 사람 식품이면 사람 프로필을, 사료면 반려동물 프로필을 선택해 주세요."
     );
   }
   const usedProfiles = scoped;
@@ -132,10 +120,7 @@ export async function POST(request: Request) {
     return { ...p, product_name };
   });
   if (products.some((p) => !p.product_name)) {
-    return NextResponse.json(
-      { error: "상품 URL, 바코드, 또는 상품명이 필요합니다." },
-      { status: 400 }
-    );
+    throw new InspectError("상품 URL, 바코드, 또는 상품명이 필요합니다.");
   }
 
   // 2. inspection 생성
@@ -157,10 +142,7 @@ export async function POST(request: Request) {
     .single();
 
   if (inspectionError || !inspection) {
-    return NextResponse.json(
-      { error: `검수 생성 실패: ${inspectionError?.message}` },
-      { status: 500 }
-    );
+    throw new InspectError(`검수 생성 실패: ${inspectionError?.message}`, 500);
   }
 
   const summary: InspectionSummary = {
@@ -210,7 +192,8 @@ export async function POST(request: Request) {
             explanationSeed: result.explanationSeed,
           });
           return (
-            ai ?? defaultExplanation(profile.name, result.status, result.explanationSeed)
+            ai ??
+            defaultExplanation(profile.name, result.status, result.explanationSeed)
           );
         })
       );
@@ -251,12 +234,12 @@ export async function POST(request: Request) {
       .update({ summary_json: summary })
       .eq("id", inspection.id);
 
-    return NextResponse.json({ inspection_id: inspection.id, summary });
+    return { inspectionId: inspection.id, summary };
   } catch (err) {
     // 부분 실패 시 생성한 inspection 정리
     await supabase.from("inspections").delete().eq("id", inspection.id);
     const message =
       err instanceof Error ? err.message : "검수 처리 중 오류가 발생했습니다.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    throw new InspectError(message, 500);
   }
 }

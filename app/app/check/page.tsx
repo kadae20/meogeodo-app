@@ -134,7 +134,7 @@ export default function CheckPage() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch("/api/inspect-product", {
+      const res = await fetch("/api/products/inspect-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

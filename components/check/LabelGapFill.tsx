@@ -56,7 +56,7 @@ export function LabelGapFill({
         return;
       }
       const [res, labelImageUrl] = await Promise.all([
-        fetch("/api/ocr-label", {
+        fetch("/api/products/ocr-label", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

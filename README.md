@@ -65,8 +65,9 @@ app/
     inspections/, [id]/     # 검수 히스토리·상세 (요약카드/프로필별 결과/상세 사유)
     whitelist/              # 프로필별 화이트리스트
   settings/, pricing/       # 계정·플랜 mock (결제 없음)
-  api/normalize-label/      # 표시 텍스트 구조화 (Claude → fallback)
-  api/inspect-product/      # 검수 실행: normalize → rule engine → 결과 저장
+  api/products/              # 상품 도메인 API (fetch-product, inspect-product, lookup-barcode,
+                             #   lookup-public-food, normalize-label, ocr-label)
+  api/extension/             # 크롬 확장 전용 API (peek, me, status, zip)
 lib/
   rules/rule-engine.ts      # 상태 결정 로직 (우선순위: 충돌 > 정보부족 > 확인필요 > 통과)
   rules/fallback-parser.ts  # Claude 없이 동작하는 파서

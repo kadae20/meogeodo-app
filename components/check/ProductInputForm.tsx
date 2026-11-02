@@ -63,7 +63,7 @@ export function ProductInputForm({
       const imageBase64 = match[2];
 
       const [res, labelImageUrl] = await Promise.all([
-        fetch("/api/ocr-label", {
+        fetch("/api/products/ocr-label", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -99,7 +99,7 @@ export function ProductInputForm({
     }
     setUrlLoading(true);
     try {
-      const res = await fetch("/api/fetch-product", {
+      const res = await fetch("/api/products/fetch-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
@@ -129,7 +129,7 @@ export function ProductInputForm({
     }
     setBarcodeLoading(true);
     try {
-      const res = await fetch("/api/lookup-barcode", {
+      const res = await fetch("/api/products/lookup-barcode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ barcode }),

@@ -89,7 +89,7 @@ export default function CartCheckPage() {
         candidates.map((p) => fillProductFromSources(p))
       );
       setProducts(filled);
-      const res = await fetch("/api/inspect-product", {
+      const res = await fetch("/api/products/inspect-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

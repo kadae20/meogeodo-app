@@ -64,7 +64,7 @@ export async function tryFillProduct(
 
   const url = next.product_url?.trim();
   if (url && !hasAnyLabel(next)) {
-    const res = await fetch("/api/fetch-product", {
+    const res = await fetch("/api/products/fetch-product", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -80,7 +80,7 @@ export async function tryFillProduct(
 
   const barcode = next.barcode?.trim();
   if (barcode && !hasAnyLabel(next)) {
-    const res = await fetch("/api/lookup-barcode", {
+    const res = await fetch("/api/products/lookup-barcode", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ barcode }),
@@ -95,7 +95,7 @@ export async function tryFillProduct(
   }
 
   if (next.product_name.trim() && !next.raw_nutrition_text?.trim()) {
-    const res = await fetch("/api/lookup-public-food", {
+    const res = await fetch("/api/products/lookup-public-food", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
