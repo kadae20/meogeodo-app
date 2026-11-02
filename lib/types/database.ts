@@ -77,6 +77,7 @@ export interface NormalizedLabelRow {
   origins_json: string[];
   label_quality_json: LabelQuality | Record<string, never>;
   confidence_score: number;
+  label_image_url: string | null;
   created_at: string;
 }
 

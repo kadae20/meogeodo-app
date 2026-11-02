@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { mergeProductFields } from "@/lib/products/fill-from-source";
+import { createClient } from "@/lib/supabase/client";
+import { uploadLabelPhoto } from "@/lib/products/upload-label-photo";
 import type { ProductInput } from "@/lib/types/food";
 
 const ALLOWED_TYPES = new Set([
@@ -53,17 +55,25 @@ export function LabelGapFill({
         toast.error("jpg, png, webp, gif 이미지만 올릴 수 있습니다.");
         return;
       }
-      const res = await fetch("/api/ocr-label", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_base64: match[2],
-          media_type: mediaType,
+      const [res, labelImageUrl] = await Promise.all([
+        fetch("/api/ocr-label", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_base64: match[2],
+            media_type: mediaType,
+          }),
         }),
-      });
+        uploadLabelPhoto(createClient(), file),
+      ]);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "사진을 읽지 못했습니다.");
-      onChange(mergeProductFields(value, data.fields as Partial<ProductInput>));
+      onChange(
+        mergeProductFields(value, {
+          ...(data.fields as Partial<ProductInput>),
+          label_image_url: labelImageUrl,
+        })
+      );
       toast.success("성분표 사진에서 표시를 채웠습니다.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "사진을 읽지 못했습니다.");

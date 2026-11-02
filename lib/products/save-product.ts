@@ -119,6 +119,7 @@ export async function saveProductWithLabel(
       origins_json: label.origins,
       label_quality_json: label.label_quality,
       confidence_score: label.confidence_score,
+      label_image_url: input.label_image_url || null,
     })
     .select("id")
     .single();

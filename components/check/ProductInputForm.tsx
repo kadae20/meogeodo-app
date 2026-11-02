@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { mergeProductFields } from "@/lib/products/fill-from-source";
 import { meogeodoListingBookmarklet } from "@/lib/products/bookmarklet";
+import { createClient } from "@/lib/supabase/client";
+import { uploadLabelPhoto } from "@/lib/products/upload-label-photo";
 import type { ProductInput } from "@/lib/types/food";
 
 const ALLOWED_TYPES = new Set([
@@ -60,20 +62,27 @@ export function ProductInputForm({
         | "image/gif";
       const imageBase64 = match[2];
 
-      const res = await fetch("/api/ocr-label", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_base64: imageBase64,
-          media_type: mediaType,
+      const [res, labelImageUrl] = await Promise.all([
+        fetch("/api/ocr-label", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_base64: imageBase64,
+            media_type: mediaType,
+          }),
         }),
-      });
+        uploadLabelPhoto(createClient(), file),
+      ]);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "사진 읽기에 실패했습니다.");
 
       const f = data.fields as Partial<ProductInput>;
-      onChange(mergeProductFields(value, f));
-      toast.success("사진에서 표시 정보를 채웠습니다. 내용을 확인한 뒤 검수하세요.");
+      onChange(mergeProductFields(value, { ...f, label_image_url: labelImageUrl }));
+      toast.success(
+        labelImageUrl
+          ? "사진에서 표시 정보를 채웠습니다. 올린 사진은 검수 결과에서 다시 볼 수 있어요."
+          : "사진에서 표시 정보를 채웠습니다. 내용을 확인한 뒤 검수하세요."
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "사진 읽기에 실패했습니다.");
     } finally {

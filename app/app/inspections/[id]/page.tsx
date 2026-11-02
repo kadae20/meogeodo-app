@@ -131,6 +131,7 @@ export default async function InspectionDetailPage({
       brandName: product?.brand_name ?? null,
       category: product?.category ?? null,
       ingredientsSummary,
+      labelImageUrl: label?.label_image_url ?? null,
       results: productResults.map((r) => {
         const profile = r.profile_id ? profileMap.get(r.profile_id) : undefined;
         const wlKey =
