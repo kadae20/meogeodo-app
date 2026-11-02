@@ -15,7 +15,7 @@ Next.js 14 (App Router) · TypeScript · Tailwind CSS · Supabase (Auth/Postgres
 ### 1. Supabase 프로젝트 준비
 
 1. https://supabase.com 에서 새 프로젝트 생성
-2. SQL Editor에서 `supabase/migrations/001_init.sql` 전체를 붙여넣고 실행 (테이블 9개 + RLS 정책)
+2. SQL Editor에서 `supabase/migrations/001_init.sql` → `002_p2.sql` → `003_p3.sql` → `004_aliases.sql` → `005_label_photos.sql` 순서대로 하나씩 붙여넣고 실행 (001은 기본 9테이블+RLS, 나머지는 가구공유·공유링크·상품별칭·라벨사진 Storage를 추가)
 3. Authentication → Providers → Email 활성화 확인
    - 테스트를 빠르게 하려면 **Confirm email을 끄면** 가입 즉시 로그인됩니다.
 
@@ -28,9 +28,11 @@ cp .env.example .env.local
 `.env.local`:
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=       # Supabase → Settings → API → Project URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY=  # 같은 화면의 anon public key
-ANTHROPIC_API_KEY=              # 선택. 없으면 fallback parser로 동작
+NEXT_PUBLIC_SUPABASE_URL=                # Supabase → Settings → API → Project URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=    # 같은 화면의 publishable key (구 anon key)
+ANTHROPIC_API_KEY=                       # 선택. 없으면 fallback parser로 동작
+GOOGLE_CLIENT_ID=                        # 선택. 구글 간편로그인을 쓸 때만
+GOOGLE_CLIENT_SECRET=                    # 선택
 ```
 
 ### 3. 로컬 실행
@@ -109,3 +111,45 @@ supabase/migrations/001_init.sql
 |---|---|
 | 오픈그래프 이미지·메타데이터 | `app/opengraph-image.tsx` + `metadataBase` (VERCEL_URL 자동 감지) |
 | 스크롤 애니메이션 | `Reveal` 컴포넌트 (IntersectionObserver + prefers-reduced-motion 대응) |
+
+## 미션 6 — CRUD MVP 대응
+
+### 핵심 기능 선정
+- **가족 프로필·기준**: Create·Read·Update·Delete 전체 사이클 (`/app/profiles`, `/app/profiles/[id]`)
+- **상품 검수**: Create(검수 실행)·Read(목록/상세)·Delete(히스토리 삭제). 검수 결과는 그 시점 표시 정보의 스냅샷이라 "수정"이 아니라 재검수로 새 기록을 남기는 방식을 택했습니다.
+- **화이트리스트**: Create·Read·Delete (`/app/whitelist`)
+
+### 테이블 구조 (마이그레이션 순서)
+| 파일 | 내용 |
+|---|---|
+| `001_init.sql` | 기본 9테이블 + RLS — user_profiles, family_profiles, profile_rules, products, normalized_labels, inspections, inspection_products, inspection_results, whitelist_items |
+| `002_p2.sql` | 가구(household) 공유 — 초대코드로 가족 프로필을 함께 보기 |
+| `003_p3.sql` | 검수 결과 공유 링크 (`/share/[token]`) |
+| `004_aliases.sql` | 상품 별칭(바코드/쿠팡 상품 ID 등) — 같은 상품 재인식 캐시 |
+| `005_label_photos.sql` | **(이번 업그레이드 추가)** 라벨 사진 Storage 버킷(`label-photos`) + `normalized_labels.label_image_url` |
+
+### 이번 업그레이드에서 보완한 부분
+- **이미지/파일 연동**: 라벨 사진을 OCR로 읽을 때 Supabase Storage `label-photos` 버킷에 원본도 저장하고, 검수 상세 화면에서 썸네일로 다시 확인할 수 있습니다. 4MB 초과·허용되지 않는 형식은 업로드 전에 막습니다. 버킷/컬럼이 아직 없으면(위 005 미적용) 업로드만 건너뛰고 OCR 결과는 그대로 쓸 수 있게 처리했습니다(기존 플로우 비파괴).
+- **페이지네이션**: `/app/inspections`가 15건 단위로 페이지네이션됩니다 (`?page=` 쿼리 파라미터, 이전/다음 버튼).
+- **CRUD 완결**: 검수 히스토리에 삭제 기능을 추가했습니다 (화이트리스트 저장 상품은 영향 없음).
+
+### QA 체크리스트
+| 시나리오 | 확인 방법 / 결과 |
+|---|---|
+| 빈 값 또는 잘못된 형식 제출 | zod로 필수값·URL 형식을 검증하고 toast로 사유를 보여줍니다 |
+| 등록 후 목록·상세 반영 | 검수·프로필·기준 생성 즉시 목록/상세에 반영됩니다 (재조회 또는 `router.refresh()`) |
+| 새로고침 후 데이터 유지 | 전부 Supabase에 저장 — localStorage나 mock data를 최종 저장소로 쓰지 않습니다 |
+| 수정·삭제 후 화면 반영 | 프로필/기준은 수정·삭제 즉시 반영됩니다. 검수 히스토리는 삭제 즉시 목록에서 제거됩니다 |
+| 존재하지 않는 상세 주소 접근 | `/app/inspections/[id]`는 없는 id면 `notFound()`로 404 안내 화면을 보여줍니다 |
+| 파일이 없거나 업로드에 실패한 경우 | 4MB·형식 제한을 미리 안내하고, 사진 업로드가 실패해도 OCR로 읽은 표시 정보는 그대로 검수에 쓸 수 있습니다 |
+
+## 미션 7 — 고도화 기능 대응
+
+**선택한 고도화 기능: AI(LLM) API 활용 기능.** 단, OpenAI API 대신 **Claude API**를 사용합니다 (결제 기능은 이번 범위에서 제외).
+
+- **왜 Claude인가**: 전체 프로덕트가 이미 Claude 기반 구조화 레이어(`lib/ai/claude.ts`, `lib/ai/prompts.ts`)로 설계돼 있고, 한국어 식품 표시사항(원재료명·영양정보·알레르기)을 읽는 품질이 검증돼 있어 별도 LLM 공급자를 추가하는 것보다 구조가 단순하고 일관됩니다. 메시지/시스템 프롬프트/JSON 강제 방식이 OpenAI와 거의 동일한 구조라 향후 공급자를 바꾸더라도 이 레이어만 교체하면 됩니다.
+- **기존 MVP 한계 보완**: 원래 MVP는 사용자가 원재료명을 직접 타이핑해야만 검수가 가능했습니다. 지금은 상품 URL 본문이나 라벨 사진을 넣으면 Claude가 표시사항(원재료·영양정보·알레르기·원산지)을 구조화해서 채워줍니다. **판단 책임은 분리**되어 있어, Claude는 구조화·설명 생성만 담당하고 최종 통과/확인필요/충돌/정보부족 판정은 항상 `lib/rules/rule-engine.ts`가 결정합니다.
+- **사용 시나리오**: (1) 쿠팡 등 상품 URL 붙여넣기 → 본문에서 표시사항 추출, (2) 라벨 사진 올리기 → OCR로 표시사항 추출 + 사진 Storage 저장, (3) Rule Engine 결과를 사람이 읽기 쉬운 문장으로 설명 생성. 성공 시 표시사항이 채워지고, 실패 시 "표시 정보를 읽지 못했습니다. 텍스트를 붙여넣어 주세요" 같은 구체적 안내로 fallback parser·직접 입력으로 이어집니다.
+- **환경·보안**: `ANTHROPIC_API_KEY`는 서버 전용 환경 변수로만 쓰이고(Route Handler 내부), 클라이언트에 노출되지 않습니다. 이미지 업로드는 4MB·형식 검증을 거칩니다.
+- **실패 처리**: API 키 미설정 / 크레딧 부족 / 레이트리밋을 각각 다른 안내 문구로 보여주고, 구조화 자체는 Claude 없이도 fallback parser로 자동 대체되어 서비스가 멈추지 않습니다.
+- **확장 가능성**: Claude 호출이 `lib/ai/claude.ts` 한 곳에 모여 있어 OpenAI로 교체하거나 두 공급자를 병행하는 구조 변경이 어렵지 않습니다. 결제 기능은 이번에 제외했지만 `/pricing`에 플랜 틀은 이미 있어 추후 붙이기 쉽습니다.
