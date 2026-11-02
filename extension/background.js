@@ -1,4 +1,4 @@
-const DEFAULT_ORIGIN = "http://localhost:3000";
+const DEFAULT_ORIGIN = "https://meogeodo-app.vercel.app";
 
 async function appOrigin() {
   const { appOrigin } = await chrome.storage.sync.get("appOrigin");

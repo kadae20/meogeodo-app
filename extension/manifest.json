@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "먹어도될까",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "쿠팡 상품 페이지에서 가족 프로필 기준으로 바로 검수합니다.",
   "icons": {
     "128": "icon.png"
@@ -16,6 +16,7 @@
   },
   "permissions": ["cookies", "storage"],
   "host_permissions": [
+    "https://meogeodo-app.vercel.app/*",
     "http://localhost:3000/*",
     "http://127.0.0.1:3000/*",
     "https://www.coupang.com/*",

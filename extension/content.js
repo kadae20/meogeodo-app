@@ -163,6 +163,7 @@
   let peeking = false;
   let extraFrameText = "";
   let ocrFor = "";
+  let dismissed = false;
 
   function ensureUi() {
     if (host) return;
@@ -173,6 +174,7 @@
     card.innerHTML = `
       <style>
         .box {
+          position: relative;
           width: 200px;
           background: #fff;
           color: #0f172a;
@@ -188,7 +190,23 @@
           font-size: 13px;
           color: #047857;
           margin-bottom: 8px;
+          padding-right: 18px;
         }
+        .close {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 18px;
+          height: 18px;
+          border: 0;
+          background: transparent;
+          color: #94a3b8;
+          font-size: 14px;
+          line-height: 1;
+          cursor: pointer;
+          border-radius: 4px;
+        }
+        .close:hover { background: #f1f5f9; color: #334155; }
         .row {
           display: flex;
           align-items: center;
@@ -218,12 +236,17 @@
         }
       </style>
       <div class="box">
+        <button class="close" title="이 창 숨기기 (새로고침하면 다시 나타납니다)">×</button>
         <div class="brand">먹어도될까</div>
         <div class="body"><div class="msg">확인 중…</div></div>
       </div>
     `;
     shadow.appendChild(card);
     document.documentElement.appendChild(host);
+    card.querySelector(".close").onclick = () => {
+      dismissed = true;
+      host.style.display = "none";
+    };
   }
 
   function setBody(html) {
@@ -253,6 +276,7 @@
 
   async function peek(opts) {
     if (!isProductPage()) return;
+    if (dismissed) return;
     if (peeking) return;
     peeking = true;
     ensureUi();
@@ -277,7 +301,7 @@
       render(res);
     } catch (_e) {
       setBody(
-        `<div class="msg">앱에 연결하지 못했습니다. localhost:3000이 켜져 있는지 확인하세요.</div>
+        `<div class="msg">먹어도될까에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.</div>
          <button class="btn" data-go="retry">다시 시도</button>`
       );
       const btn = card.querySelector("[data-go=retry]");
@@ -312,7 +336,7 @@
       return;
     }
     if (!res.ok) {
-      setBody('<div class="msg">지금은 확인할 수 없습니다. npm run dev 가 켜져 있는지 보세요.</div>');
+      setBody('<div class="msg">지금은 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.</div>');
       return;
     }
     const rows = (res.data.profiles || [])
